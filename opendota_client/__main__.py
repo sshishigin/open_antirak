@@ -3,22 +3,24 @@ import sys
 
 import pymongo
 
+from opendota_client.settings import WorkerSettings
 from opendota_client.workers import Master, Slave
 
 
 async def main():
     args = sys.argv
+    settings = WorkerSettings()
     if len(args) == 1:
         print("master or slave?")
         sys.exit(1)
     worker_type = args[1]
     if worker_type == "slave":
-        mongo = pymongo.MongoClient("localhost")
+        mongo = pymongo.MongoClient(settings.DATABASE)
         database = mongo.get_database("hero_picker")
         collection = database.get_collection("matches")
-        worker = Slave("amqp://localhost", collection)
+        worker = Slave(settings.BROKER, collection)
     elif worker_type == "master":
-        worker = Master("amqp://localhost")
+        worker = Master(settings.BROKER)
     else:
         print("Unknown worker type, exit")
         sys.exit(1)

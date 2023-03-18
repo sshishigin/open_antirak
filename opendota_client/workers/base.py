@@ -14,29 +14,36 @@ class Worker(abc.ABC):
     _connect_attempts = 10
     _timeout = 10
     _prefetch_count = 1
-    __received_message_model = None
 
     def __init__(self, broker: str):
         self.tasks_broker = broker
-        self.channel = None
-        self.slaves = RoundRobinQueue()
+        self.channel: aio_pika.abc.AbstractRobustChannel | None = None
+
+    async def on_start(self):
+        return
 
     async def start(self):
+        print(f"starting worker '{self.name}'")
         for attempt in range(self._connect_attempts):
             try:
                 self.connection = await aio_pika.connect_robust(url=self.tasks_broker)
                 break
             except ConnectionError as error:
+                print("ne modu((")
                 if attempt == self._connect_attempts - 1:
                     raise error
                 await asyncio.sleep(self._timeout)
 
         self.channel = await self.connection.channel()
         await self.channel.set_qos(prefetch_count=self._prefetch_count)
-        queue = await self.channel.declare_queue("master", durable=True)
+        queue = await self.channel.declare_queue(self.name, durable=True)
+        await self.on_start()
+
         await queue.consume(self._process_message)
 
     async def stop(self):
+        if self.name != "master":
+            await self.channel.queue_delete(self.name)
         await self.connection.close()
 
     async def _process_message(self, message: aio_pika.abc.AbstractIncomingMessage):
@@ -46,7 +53,8 @@ class Worker(abc.ABC):
             except (JSONDecodeError, TypeError):
                 await message.reject()
             try:
-                message_model = self.__received_message_model(**message_json)
+                message_model = await self.decode(message_json)
+                print(f"Got '{message_model.type}' message")
             except ValidationError:
                 logger.error(f"Переданные в задании данные не соответствуют установленному контракту: {message_json}")
                 return
@@ -57,6 +65,10 @@ class Worker(abc.ABC):
 
     @abc.abstractmethod
     async def handle_message(self, message):
+        ...
+
+    @abc.abstractmethod
+    async def decode(self, message_json):
         ...
 
 

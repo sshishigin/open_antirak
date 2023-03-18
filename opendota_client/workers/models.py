@@ -3,9 +3,9 @@ import pydantic
 
 class SlaveMessageModel(pydantic.BaseModel):
     slave_id: str
-    message_type: str
+    type: str
 
 
 class MasterMessageModel(pydantic.BaseModel):
-    message_type: str
-    body: dict
+    type: str
+    body: dict | list

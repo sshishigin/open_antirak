@@ -22,8 +22,8 @@ async def get_match(session: aiohttp.ClientSession, match_id):
     return match
 
 
-def save_match(collection: pymongo.collection.Collection, match: dict):
-    collection.insert_one(match)
+async def save_match(collection: pymongo.collection.Collection, match: dict):
+    await collection.insert_one(match)
 
 
 # async def get_matches(session, collection):

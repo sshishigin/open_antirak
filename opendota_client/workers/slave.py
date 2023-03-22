@@ -1,5 +1,5 @@
 from uuid import uuid4
-
+import motor.motor_asyncio
 import aiohttp
 import pymongo.collection
 
@@ -26,13 +26,13 @@ class Slave(Worker):
             async with aiohttp.ClientSession() as session:
                 for match_id in message.body:
                     match = await get_match(session, match_id)
-                    save_match(self._collection, match)
+                    await save_match(self._collection, match)
             await self.send_ready_message()
         elif message.type == "setup":
             await self.setup(data_destination=message.body["data_destination"])
 
     async def setup(self, data_destination):
-        mongo = pymongo.MongoClient(data_destination)
+        mongo = motor.motor_asyncio.AsyncIOMotorClient(data_destination)
         database = mongo.get_database("hero_picker")
         self._collection = database.get_collection("matches")
         await self.send_ready_message()

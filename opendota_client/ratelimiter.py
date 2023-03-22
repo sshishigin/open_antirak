@@ -1,6 +1,7 @@
+from asyncio import sleep
 from functools import wraps
 from multiprocessing import Process, Value
-from time import sleep
+from time import sleep as sync_sleep
 
 
 class RateLimitExceeded(Exception):
@@ -39,7 +40,7 @@ class RateLimiter:
 
     def watch(self):
         while True:
-            sleep(self.period)
+            sync_sleep(self.period)
             self.current_num.value = 0
 
 
@@ -48,14 +49,14 @@ def rate_limit(func):
     rate_limit.limiter.start()
 
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    async def wrapper(*args, **kwargs):
         retries = 100
         while retries != 0:
             try:
                 rate_limit.limiter.add()
             except RateLimitExceeded:
-                sleep(2)
+                await sleep(2)
                 retries -= 1
             else:
-                return func(*args, **kwargs)
+                return await func(*args, **kwargs)
     return wrapper

@@ -15,10 +15,7 @@ async def main():
         sys.exit(1)
     worker_type = args[1]
     if worker_type == "slave":
-        mongo = pymongo.MongoClient(settings.DATABASE)
-        database = mongo.get_database("hero_picker")
-        collection = database.get_collection("matches")
-        worker = Slave(settings.BROKER, collection)
+        worker = Slave(settings.BROKER)
     elif worker_type == "master":
         worker = Master(settings.BROKER)
     else:

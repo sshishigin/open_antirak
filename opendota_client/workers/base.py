@@ -4,6 +4,7 @@ import json
 from asyncio.log import logger
 from json import JSONDecodeError
 
+import pydantic
 from pydantic import ValidationError
 import aio_pika
 
@@ -62,6 +63,15 @@ class Worker(abc.ABC):
                 f"Message received: {message_model.dict()}"
             )
             await self.handle_message(message_model)
+
+    async def send_message(self, destination: str, message: pydantic.BaseModel):
+        print(f"sending {message.type} to {destination}")
+        await self.channel.default_exchange.publish(
+            aio_pika.Message(
+                body=message.json().encode()
+            ),
+            routing_key=destination
+        )
 
     @abc.abstractmethod
     async def handle_message(self, message):
